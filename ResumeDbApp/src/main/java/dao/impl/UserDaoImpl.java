@@ -79,6 +79,26 @@ public class UserDaoImpl extends AbstractDao implements UserDaoInter {
         }
         return result;
     }
+        @Override
+    public User findByEmailAndPassword(String email, String password) {
+        User result=null;
+        try ( Connection c = connect()) {
+
+            PreparedStatement stmt = c.prepareStatement("select * from user where email=? and password=?");
+            stmt.setString(1, email);
+               stmt.setString(2, password);
+         ResultSet rs=stmt.executeQuery();
+         while(rs.next()){
+          result=getUser(rs);
+         }
+            
+
+        } catch (Exception e) {
+            e.printStackTrace();
+         
+        }
+        return result;
+    }
 
     @Override
     public User getById(int userId) {
@@ -173,5 +193,7 @@ public class UserDaoImpl extends AbstractDao implements UserDaoInter {
             return false;
         }
     }
+
+
 
 }
