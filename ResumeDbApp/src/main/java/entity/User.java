@@ -14,6 +14,7 @@ public class User {
     private String email;
     private String phone;
     private String profileDescription;
+    private String password;
     private Date birthDate;
     private Country country;
     private Country birthPlace;
@@ -129,6 +130,15 @@ public class User {
     public void setCountry(Country country) {
         this.country = country;
     }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+    
 
     @Override
     public String toString() {

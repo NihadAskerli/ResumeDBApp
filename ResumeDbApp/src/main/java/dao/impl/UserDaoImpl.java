@@ -1,6 +1,6 @@
-
 package dao.impl;
 
+import at.favre.lib.crypto.bcrypt.BCrypt;
 import entity.Country;
 import entity.User;
 import dao.inter.AbstractDao;
@@ -18,26 +18,40 @@ public class UserDaoImpl extends AbstractDao implements UserDaoInter {
         String surname = rs.getString("surname");
         String email = rs.getString("email");
         String phone = rs.getString("phone");
-        String profileDesc=rs.getString("profile_description");
+        String profileDesc = rs.getString("profile_description");
         int nationalityId = rs.getInt("nationality_id");
         int birthplaceId = rs.getInt("birthplace_id");
         String nationalityStr = rs.getString("nationality");
         String birthPlaceStr = rs.getString("birthplace");
         Date birthdate = rs.getDate("birthdate");
-        
 
         Country nationality = new Country(nationalityId, null, nationalityStr);
         Country birthplace = new Country(birthplaceId, birthPlaceStr, null);
-       return new User(id,name,surname,phone,email,profileDesc,birthdate,nationality,birthplace);
+        return new User(id, name, surname, phone, email, profileDesc, birthdate, nationality, birthplace);
+    }
+
+    private User getUserSimple(ResultSet rs) throws Exception {
+        int id = rs.getInt("id");
+        String name = rs.getString("name");
+        String surname = rs.getString("surname");
+        String email = rs.getString("email");
+        String phone = rs.getString("phone");
+        String profileDesc = rs.getString("profile_description");
+        int nationalityId = rs.getInt("nationality_id");
+        int birthplaceId = rs.getInt("birthplace_id");
+        Date birthdate = rs.getDate("birthdate");
+
+       User user =new User(id, name, surname, phone, email, profileDesc, birthdate, null, null);
+        user.setPassword(rs.getString("password"));
+        return user;
     }
 
     @Override
-    public List<User> getAll(String name,String surname,Integer nationalityId) {
+    public List<User> getAll(String name, String surname, Integer nationalityId) {
         List<User> result = new ArrayList<>();
         try ( Connection c = connect()) {
 
-
-            String sql="SELECT"
+            String sql = "SELECT"
                     + "\tu.*,"
                     + "\tn.nationality,"
                     + "\tc.nationality AS birthplace "
@@ -45,27 +59,27 @@ public class UserDaoImpl extends AbstractDao implements UserDaoInter {
                     + "\tUSER u"
                     + "\tLEFT JOIN country n ON u.nationality_id = n.id "
                     + "\tLEFT JOIN country c on u.birthplace_id=c.id where 1=1";
-            if(name!=null && ! name.trim().isEmpty()){
-                sql+=" and u.name=? ";
+            if (name != null && !name.trim().isEmpty()) {
+                sql += " and u.name=? ";
             }
-            if(surname!=null && ! surname.trim().isEmpty()){
-                sql+=" and u.surname=?";
+            if (surname != null && !surname.trim().isEmpty()) {
+                sql += " and u.surname=?";
             }
-            if(nationalityId!=null){
-                sql+=" and u.nationality_id=?";
+            if (nationalityId != null) {
+                sql += " and u.nationality_id=?";
             }
             PreparedStatement stmt = c.prepareStatement(sql);
-            int i=1;
-            if(name!=null&& ! name.trim().isEmpty()){
-                stmt.setString(i,name);
+            int i = 1;
+            if (name != null && !name.trim().isEmpty()) {
+                stmt.setString(i, name);
                 i++;
             }
-            if(surname!=null && ! surname.trim().isEmpty()){
-                stmt.setString(i,surname);
+            if (surname != null && !surname.trim().isEmpty()) {
+                stmt.setString(i, surname);
                 i++;
             }
-            if(nationalityId!=null){
-                stmt.setInt(i,nationalityId);
+            if (nationalityId != null) {
+                stmt.setInt(i, nationalityId);
             }
             stmt.execute();
             ResultSet rs = stmt.getResultSet();
@@ -79,33 +93,53 @@ public class UserDaoImpl extends AbstractDao implements UserDaoInter {
         }
         return result;
     }
-        @Override
+
+    @Override
     public User findByEmailAndPassword(String email, String password) {
-        User result=null;
+        User result = null;
         try ( Connection c = connect()) {
 
             PreparedStatement stmt = c.prepareStatement("select * from user where email=? and password=?");
             stmt.setString(1, email);
-               stmt.setString(2, password);
-         ResultSet rs=stmt.executeQuery();
-         while(rs.next()){
-          result=getUser(rs);
-         }
-            
+            stmt.setString(2, password);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                result = getUserSimple(rs);
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
-         
+
+        }
+        return result;
+    }
+
+    @Override
+    public User findByEmail(String email) {
+        User result = null;
+        try ( Connection c = connect()) {
+
+            PreparedStatement stmt = c.prepareStatement("select * from user where email=?");
+            stmt.setString(1, email);
+
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                result = getUserSimple(rs);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
         }
         return result;
     }
 
     @Override
     public User getById(int userId) {
-        User result=null;
+        User result = null;
         try ( Connection c = connect()) {
 
-            PreparedStatement stmt =c.prepareStatement ("SELECT"
+            PreparedStatement stmt = c.prepareStatement("SELECT"
                     + "\tu.*,"
                     + "\tn.nationality,"
                     + "\tc.nationality AS birthplace "
@@ -114,8 +148,7 @@ public class UserDaoImpl extends AbstractDao implements UserDaoInter {
                     + "\tLEFT JOIN country n ON u.nationality_id = n.id "
                     + "\tLEFT JOIN country c on u.birthplace_id=c.id where u.id=?");
 
-
-            stmt.setInt(1,userId);
+            stmt.setInt(1, userId);
             stmt.execute();
             ResultSet rs = stmt.getResultSet();
             while (rs.next()) {
@@ -146,7 +179,7 @@ public class UserDaoImpl extends AbstractDao implements UserDaoInter {
             stmt.setString(4, u.getEmail());
             stmt.setString(5, u.getProfileDescription());
             stmt.setDate(6, u.getBirthDate());
-                        stmt.setInt(7, u.getBirthPlace().getId());
+            stmt.setInt(7, u.getBirthPlace().getId());
 
             stmt.setInt(8, u.getId());
             return stmt.execute();
@@ -157,18 +190,19 @@ public class UserDaoImpl extends AbstractDao implements UserDaoInter {
         }
 
     }
+    private BCrypt.Hasher crypt = BCrypt.withDefaults();
 
     @Override
     public boolean addUser(User u) {
 
         try ( Connection c = connect()) {
-            PreparedStatement stmt = c.prepareStatement("insert into user(id,name,surname,email,phone,profile_Description) values(?,?,?,?,?,?)");
+            PreparedStatement stmt = c.prepareStatement("insert into user(id,name,surname,email,phone,password) values(?,?,?,?,?,?)");
             stmt.setInt(1, u.getId());
             stmt.setString(2, u.getName());
             stmt.setString(3, u.getSurname());
             stmt.setString(4, u.getEmail());
             stmt.setString(5, u.getPhone());
-            stmt.setString(6, u.getProfileDescription());
+            stmt.setString(6, crypt.hashToString(4, u.getPassword().toCharArray()));
 
             return stmt.execute();
 
@@ -186,14 +220,11 @@ public class UserDaoImpl extends AbstractDao implements UserDaoInter {
             PreparedStatement stmt = c.prepareStatement("delete from user where id=?");
             stmt.setInt(1, id);
             return stmt.execute();
-            
 
         } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
     }
-
-
 
 }

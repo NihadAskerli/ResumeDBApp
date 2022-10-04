@@ -12,6 +12,11 @@
             <version>8.0.30</version>
             <type>jar</type>
         </dependency>
+        <dependency>
+            <groupId>at.favre.lib</groupId>
+            <artifactId>bcrypt</artifactId>
+            <version>0.4.1</version>
+        </dependency>
 
     </dependencies>
     <properties>
